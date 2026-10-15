@@ -1,122 +1,272 @@
-# Flask App with MySQL Docker Setup
+# Flask + MySQL Docker Network
 
-A small two-tier app: a Flask web app that stores messages in MySQL. Submit a message in the form; it is saved in the database and listed on the page.
+A two-tier web application built using **Flask, MySQL, and Docker**. The Flask application and MySQL database run in separate containers connected through a custom Docker bridge network. A Docker named volume provides persistent database storage.
 
-Stack: Python 3.13, Flask 3.1, gunicorn, PyMySQL, MySQL 8.4.
+## 🚀 Project Overview
 
-| Route | What it does |
-|---|---|
-| `GET /` | Lists all messages and shows which server answered |
-| `POST /submit` | Saves `new_message` (form field), returns it as JSON |
-| `GET /health` | Returns `{"status":"ok"}` (no database call), used by health checks |
+This project demonstrates containerization, Docker networking, database connectivity, and persistent storage using Docker CLI commands.
 
-## Prerequisites
+### Architecture
 
-- Docker with the Compose plugin (`docker compose`)
-- Git (optional, for cloning the repository)
-
-## Run with Docker Compose
-
-1. Clone and enter the repo:
-
-   ```bash
-   git clone https://github.com/LondheShubham153/two-tier-flask-app.git
-   cd two-tier-flask-app
-   ```
-
-2. (Optional) set your own database credentials. Without a `.env` file the defaults in `docker-compose.yml` are used.
-
-   ```bash
-   cp .env.example .env   # then edit the passwords
-   ```
-
-3. Start everything:
-
-   ```bash
-   docker compose up --build
-   ```
-
-4. Open http://localhost:5000, send a few messages. The `messages` table is created automatically.
-
-   > On macOS, port 5000 may already be used by *AirPlay Receiver*. Turn it off in System Settings, or change the left side of `"5000:5000"` in `docker-compose.yml`.
-
-5. Stop and remove the containers (`-v` also deletes the database volume):
-
-   ```bash
-   docker compose down        # keep data
-   docker compose down -v     # delete data too
-   ```
-
-`make build`, `make run`, `make stop`, `make test` and `make clean` are shortcuts for the common commands.
-
-## Run without Docker Compose
-
-1. Build the image and create a network:
-
-   ```bash
-   docker build -t flaskapp .
-   docker network create twotier
-   ```
-
-2. Start MySQL:
-
-   ```bash
-   docker run -d \
-       --name mysql \
-       -v mysql-data:/var/lib/mysql \
-       --network=twotier \
-       -e MYSQL_DATABASE=mydb \
-       -e MYSQL_ROOT_PASSWORD=admin \
-       -p 3306:3306 \
-       mysql:8.4
-   ```
-
-3. Start the app (wait a few seconds for MySQL to be ready first):
-
-   ```bash
-   docker run -d \
-       --name flaskapp \
-       --network=twotier \
-       -e MYSQL_HOST=mysql \
-       -e MYSQL_USER=root \
-       -e MYSQL_PASSWORD=admin \
-       -e MYSQL_DB=mydb \
-       -p 5000:5000 \
-       flaskapp:latest
-   ```
-
-## Configuration
-
-The app reads its database settings from environment variables:
-
-| Variable | Default |
-|---|---|
-| `MYSQL_HOST` | `localhost` |
-| `MYSQL_PORT` | `3306` |
-| `MYSQL_USER` | `default_user` |
-| `MYSQL_PASSWORD` | `default_password` |
-| `MYSQL_DB` | `default_db` |
-| `FLASK_DEBUG` | off (`1` enables debug when running `python app.py`) |
-
-## Tests
-
-```bash
-pip install -r requirements-dev.txt
-pytest
+```text
+                 Web Browser
+              http://localhost:5000
+                       |
+                       v
+              +------------------+
+              | Flask Container  |
+              |   Port: 5000     |
+              +------------------+
+                       |
+                       | Custom Bridge Network
+                       |
+                       v
+              +------------------+
+              | MySQL Container  |
+              |   Port: 3306     |
+              +------------------+
+                       |
+                       v
+              +------------------+
+              | Docker Volume    |
+              |   mysql_data     |
+              +------------------+
 ```
 
-## What's in the repo
+## 🛠️ Technologies Used
 
-| Path | Purpose |
-|---|---|
-| `Dockerfile`, `Dockerfile-multistage` | Container images (the second shows the multi-stage pattern) |
-| `docker-compose.yml`, `Makefile` | Local run |
-| `Jenkinsfile` | CI/CD pipeline |
-| `beanstalk/` | Run the app on AWS Elastic Beanstalk (compose file for Standard Mode, Docker Hub image plus RDS for Cluster Mode) |
-| `k8s/`, `eks-manifests/` | Kubernetes manifests (kubeadm cluster / Amazon EKS) |
-| **`aws/`** | **Step-by-step guide to run this app on AWS: VPC, EC2, RDS, ALB, Auto Scaling, CloudWatch** |
+- **Python** — Application programming language
+- **Flask** — Web framework
+- **MySQL 8.0** — Relational database
+- **PyMySQL** — Python MySQL connector
+- **Gunicorn** — WSGI application server
+- **Docker** — Containerization and networking
 
-## Notes
+## ✨ Features
 
-- This is a demo setup. For production use real secrets management, TLS and backups.
-- If something fails, check `docker compose logs`.
+- Flask application running inside a Docker container
+- MySQL database running in a separate container
+- Custom Docker bridge network for container-to-container communication
+- Persistent database storage using a named volume
+- Environment variables for database configuration
+- Web interface for viewing and submitting messages
+- Health-check endpoint for the Flask application
+
+## 📁 Project Structure
+
+```text
+Flask-MySQL-Docker-Network/
+├── app.py
+├── Dockerfile
+├── requirements.txt
+└── templates/
+    └── index.html
+```
+
+## ⚙️ Prerequisites
+
+Install the following before starting:
+
+- Docker Desktop
+- Git
+- A code editor such as Visual Studio Code
+
+Ensure Docker Desktop is running.
+
+## 🏗️ Setup and Installation
+
+### 1. Clone the repository
+
+```bash
+git clone <YOUR_REPOSITORY_URL>
+cd Flask-MySQL-Docker-Network
+```
+
+Replace `<YOUR_REPOSITORY_URL>` with your actual GitHub repository URL.
+
+### 2. Build the Flask Docker image
+
+```bash
+docker build -t flask-app .
+```
+
+This builds the image using the Dockerfile in the current directory.
+
+### 3. Create a custom bridge network
+
+```bash
+docker network create --driver bridge flask-mysql-network
+```
+
+Verify the network:
+
+```bash
+docker network ls
+```
+
+### 4. Create a persistent Docker volume
+
+```bash
+docker volume create mysql_data
+```
+
+The volume stores MySQL database files independently of the container lifecycle.
+
+### 5. Run the MySQL container
+
+```bash
+docker run -d --name mysql --network flask-mysql-network -e MYSQL_ROOT_PASSWORD=RootPass123! -e MYSQL_DATABASE=flaskdb -e MYSQL_USER=flaskuser -e MYSQL_PASSWORD=FlaskPass123! -p 3307:3306 -v mysql_data:/var/lib/mysql mysql:8.0
+```
+
+Check the container logs:
+
+```bash
+docker logs mysql
+```
+
+Wait until MySQL is ready to accept connections.
+
+### 6. Run the Flask container
+
+```bash
+docker run -d --name flask-app --network flask-mysql-network -p 5000:5000 -e MYSQL_HOST=mysql -e MYSQL_PORT=3306 -e MYSQL_USER=flaskuser -e MYSQL_PASSWORD=FlaskPass123! -e MYSQL_DB=flaskdb flask-app
+```
+
+Flask connects to MySQL using the hostname `mysql` and the internal database port `3306`.
+
+### 7. Verify the containers
+
+```bash
+docker ps
+```
+
+Inspect the network:
+
+```bash
+docker network inspect flask-mysql-network
+```
+
+Both containers should appear in the network configuration.
+
+## 🌐 Access the Application
+
+Open the following URLs in your browser:
+
+- Application: http://localhost:5000
+- Health endpoint: http://localhost:5000/health
+
+The health endpoint returns:
+
+```json
+{
+  "status": "ok"
+}
+```
+
+**Note:** The health endpoint verifies the Flask application process, not MySQL connectivity.
+
+## 🗄️ Access the MySQL Database
+
+Connect to MySQL from the terminal:
+
+```bash
+docker exec -it mysql mysql -u flaskuser -p
+```
+
+Enter the configured password, then run:
+
+```sql
+USE flaskdb;
+SHOW TABLES;
+DESCRIBE messages;
+SELECT * FROM messages;
+```
+
+Exit the MySQL client:
+
+```sql
+EXIT;
+```
+
+## 🔌 Understanding Docker Networking
+
+The application uses a custom bridge network named `flask-mysql-network`.
+
+- Flask connects to MySQL using `mysql:3306`.
+- MySQL is published on host port `3307` for optional external database access.
+- Flask is published on host port `5000` for browser access.
+
+The port mapping format is:
+
+```text
+HOST_PORT:CONTAINER_PORT
+```
+
+For example, `3307:3306` maps host port 3307 to MySQL's container port 3306.
+
+The MySQL host port mapping is optional because Flask communicates directly over the Docker network.
+
+## 💾 Persistent Storage
+
+The named volume `mysql_data` is mounted at:
+
+```text
+/var/lib/mysql
+```
+
+This allows database files to persist when the MySQL container is stopped or removed. The volume must not be deleted if you want to preserve the stored data.
+
+View volumes:
+
+```bash
+docker volume ls
+```
+
+## 🧹 Cleanup
+
+Stop the containers:
+
+```bash
+docker stop flask-app mysql
+```
+
+Remove the containers:
+
+```bash
+docker rm flask-app mysql
+```
+
+Remove the network after the containers have been disconnected or removed:
+
+```bash
+docker network rm flask-mysql-network
+```
+
+**Warning:** Do not remove the `mysql_data` volume unless you intentionally want to delete the stored database files.
+
+## 🔐 Security Notes
+
+- The passwords in the example commands are for local learning only.
+- Use strong, unique credentials for real deployments.
+- Do not commit passwords or other secrets to GitHub.
+- Avoid publishing the MySQL port if external database access is unnecessary.
+
+## 🎯 Learning Outcomes
+
+- Building Docker images from a Dockerfile
+- Running Flask and MySQL in separate containers
+- Creating and inspecting a custom bridge network
+- Configuring container communication using environment variables
+- Publishing container ports to the host
+- Persisting database data using Docker volumes
+- Executing SQL commands inside a running container
+
+## 👨‍💻 Author
+
+**Your Name**
+
+GitHub: [Your GitHub Profile](https://github.com/)
+
+---
+
+*This project was created for learning and demonstrating Docker containerization, networking, and database integration.*
